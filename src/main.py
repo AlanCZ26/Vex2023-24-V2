@@ -110,9 +110,10 @@ def catapult():
                 print("ran")
                 cataMotors(12)
                 wait(0.3,SECONDS)
-                while cataSensor.position() > 10:
-                    wait(0.1,SECONDS) #100 = just shot, 0 = going to shoot, 10 = primed
-                    cataMotors(cataSensor.position()/2 + 5)
+                while cataSensor.position() > 15:
+                    print(cataSensor.position())
+                    wait(0.01,SECONDS) #100 = just shot, 0 = going to shoot, 10 = primed
+                    #cataMotors(cataSensor.position()/2 + 5)
                 cataMotors(0)
 
 
@@ -234,7 +235,7 @@ def pre_autonomous():
     n = 3 #change value to change starting side, 1=L, 2=R, 3=driver
     print("wawawa")
     #t1 = Thread(PTOswitcher)
-    t2 = Thread(catapult())
+    t2 = Thread(catapult)
     rMotor1.set_stopping(HOLD)
     rMotor2.set_stopping(HOLD)
     rtMotor.set_stopping(HOLD)
@@ -294,7 +295,7 @@ def autonomous():
 
 
 def user_control():
-    catapult()
+
     #user control
     brain.screen.clear_screen()
     controller.screen.print("user")
@@ -331,6 +332,7 @@ def user_control():
 #triggers
 pre_autonomous()
 print("wakdf")
+user_control()
 if False: #set true for competition
     comp = Competition(user_control, autonomous)
 else:
