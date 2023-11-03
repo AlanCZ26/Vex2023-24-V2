@@ -9,7 +9,7 @@
 
 # Library imports
 from vex import *
-from math import *
+import math
 
 # Brain should be defined by default
 brain=Brain()
@@ -17,51 +17,63 @@ brain=Brain()
 #controller
 controller = Controller()
 
+
+"""controls:
+x = shoot
+l1 = intake up
+l2 = intake down
+r1 = wings out
+r2 = wings in
+up = pto/flipper on (cata)
+down = pto to drive
+"""
+
+
 #motors
 
-lMotor1 = Motor(Ports.PORT8, GearSetting.RATIO_6_1, True)
-lMotor2 = Motor(Ports.PORT11, GearSetting.RATIO_6_1, True)
-ltMotor = Motor(Ports.PORT6, GearSetting.RATIO_6_1, True) #PTO motor
-rMotor1 = Motor(Ports.PORT3, GearSetting.RATIO_6_1, False)
-rMotor2 = Motor(Ports.PORT2, GearSetting.RATIO_6_1, False)
-rtMotor = Motor(Ports.PORT1, GearSetting.RATIO_6_1, False) #PTO motor
-cataMotor = Motor(Ports.PORT10,GearSetting.RATIO_36_1, True) #motor for only cata
-intakeMotor = Motor(Ports.PORT12,GearSetting.RATIO_36_1, False) #intake
+lMotor1 = Motor(Ports.PORT18, GearSetting.RATIO_6_1, True)
+lMotor2 = Motor(Ports.PORT20, GearSetting.RATIO_6_1, True)
+lMotor3 = Motor(Ports.PORT10, GearSetting.RATIO_6_1, True)
+ltMotor = Motor(Ports.PORT7 , GearSetting.RATIO_6_1, True) #PTO motor
+rMotor1 = Motor(Ports.PORT11, GearSetting.RATIO_6_1, False)
+rMotor2 = Motor(Ports.PORT12, GearSetting.RATIO_6_1, False)
+rMotor3 = Motor(Ports.PORT9 , GearSetting.RATIO_6_1, False)
+rtMotor = Motor(Ports.PORT2 , GearSetting.RATIO_6_1, False)#PTO motor
 
-PTOpiston = DigitalOut(brain.three_wire_port.a)
-flipperPiston = DigitalOut(brain.three_wire_port.b)
-wingsSolenoid = DigitalOut(brain.three_wire_port.c)
+PTOpiston = DigitalOut(brain.three_wire_port.b)
+flipperPiston = DigitalOut(brain.three_wire_port.c)
+wingsSolenoid = DigitalOut(brain.three_wire_port.a)
 intakeSolenoid =DigitalOut(brain.three_wire_port.d)
+
+cataSensor = Rotation(Ports.PORT6)
 
 #variables
 PTOvar = 1 #0 = speed, 1 = cata, 2 = switching
-buttonPrev = True
 brain.screen.print("Hello V5")
-pistBool = False
 button = False
 
 
 def drivetrain(lInput, rInput):
-    global PTOvar  
+    global PTOvar
+    lSpeed = lInput / 8
+    rSpeed = rInput / 8
     if lInput == rInput == 0:
         lMotor1.stop()
         rMotor1.stop()
         lMotor2.stop()
         rMotor2.stop()
+        lMotor3.stop()
+        rMotor3.stop()
         if PTOvar ==0:
             ltMotor.stop()
             rtMotor.stop()
     else:
-
-
-        lSpeed = lInput / 8
-        rSpeed = rInput / 8
-
         lMotor1.spin(FORWARD,lSpeed,VOLT)
         lMotor2.spin(FORWARD,lSpeed,VOLT)
+        lMotor3.spin(FORWARD,lSpeed,VOLT)
         rMotor1.spin(FORWARD,rSpeed,VOLT)
         rMotor2.spin(FORWARD,rSpeed,VOLT)
-
+        rMotor3.spin(FORWARD,rSpeed,VOLT)
         if PTOvar == 0:
             ltMotor.spin(FORWARD,lSpeed,VOLT)    
             rtMotor.spin(FORWARD,rSpeed,VOLT)
@@ -69,41 +81,43 @@ def drivetrain(lInput, rInput):
 
 def PTOswitcher():
     global PTOvar
-    global buttonPrev
-    global pistBool
-    button = controller.buttonRight.pressing()
-
-    if button == True and buttonPrev == False:
-        if pistBool == False: pistBool = True
-        else: pistBool = False
-    
-    if button == True: #while the button is held
-        PTOvar = 2 #stop the motors
-        ltMotor.stop()
-        rtMotor.stop()
-    else:
-        if pistBool == True: #switching to catapult
-            PTOvar = 0
-            PTOpiston.set(False)
-        else: #switching to drive
-            PTOvar = 1
-            PTOpiston.set(True)
-    
-    buttonPrev = button
+    if controller.buttonDown.pressing():
+        PTOvar = 0 #speed
+        PTOpiston.set(False)
+        flipperPiston.set(False)
+    if controller.buttonUp.pressing():
+        PTOvar = 1 #cata
+        PTOpiston.set(True)
+        flipperPiston.set(True)
     
 def cataMotors(s):
     print("spinning cata at " + str(s))
     if abs(s) <= 1: #to stop the motors & make sure it doesn't go backwards
         ltMotor.stop()
         rtMotor.stop()
-        cataMotor.stop()
     else:
-        cataMotor.spin(REVERSE,s,VOLT)  
         if PTOvar == 1:
             ltMotor.spin(FORWARD,s,VOLT)    
             rtMotor.spin(FORWARD,s,VOLT)
 
 def catapult():
+    global PTOvar
+    while True:
+        wait(0.2,SECONDS)
+        print("e")
+        if PTOvar == 1:
+            if controller.buttonX.pressing():
+                print("ran")
+                cataMotors(12)
+                wait(0.3,SECONDS)
+                while cataSensor.position() > 10:
+                    wait(0.1,SECONDS) #100 = just shot, 0 = going to shoot, 10 = primed
+                    cataMotors(cataSensor.position()/2 + 5)
+                cataMotors(0)
+
+
+
+    """
     global PTOvar
     running = True
     global cataTrig
@@ -134,11 +148,7 @@ def catapult():
         elif controller.buttonR2.pressing():
             cataMotors(controller.axis2.position()/8)
             cataMotor.set_position(0,DEGREES)
-            
-
-        """
-
-
+        """"""
         if controller.buttonR1.pressing(): 
             running = True
             cataTrig = True
@@ -214,6 +224,7 @@ def driveInches(lInput,rInput,lSpd,rSpd):
 def pre_autonomous():
     wingsSolenoid.set(False)
     PTOpiston.set(True) #start with cata mode
+    flipperPiston.set(True)#start with tilter up
     #pre auton
     #note to self add an auton side select thing
     brain.screen.clear_screen()
@@ -221,10 +232,9 @@ def pre_autonomous():
     #auton side value
     global n
     n = 3 #change value to change starting side, 1=L, 2=R, 3=driver
-
+    print("wawawa")
     #t1 = Thread(PTOswitcher)
-    t2 = Thread(catapult)
-    
+    t2 = Thread(catapult())
     rMotor1.set_stopping(HOLD)
     rMotor2.set_stopping(HOLD)
     rtMotor.set_stopping(HOLD)
@@ -280,46 +290,11 @@ def autonomous():
     #auton
     brain.screen.clear_screen()
     brain.screen.print("autonomous code")
-    global n # 1 = Left, 2 = Right, 3 = Double
-    print(n)
-    
-    n = 2
 
-    #if n == 2:
-        #driveInches(-60,-60,80,80)
-    if n == 10:
-        print("left side")
-        driveInches(-22,-22,50,50)
-        driveInches(4.4,-4.4,50,50)
-        driveInches(-25,-25,50,50)
-        driveInches(4.4,-4.4,50,50)
-        driveInches(-10,-10,40,40)
-        driveInches(1,4,30,50)
-        driveInches(-1,-1,100,100)
-        wait(0.5,SECONDS)
-        cataMotors(12)
-        wait(0.4,SECONDS)
-        cataMotors(0)
-    elif n == 2:
-        print("just pickup")
-        driveInches(-13,-13,50,50)
-        driveInches(4.6,-4.6,50,50)
-        intakeMotor.spin(FORWARD,12,VOLT) 
-#        driveInches(15,15,30,30)
-        lMotor1.spin(FORWARD,5,VOLT)
-        lMotor2.spin(FORWARD,5,VOLT)
-        rMotor1.spin(FORWARD,5,VOLT)
-        rMotor2.spin(FORWARD,5,VOLT)
-        wait(4,SECONDS)
-        lMotor1.stop()
-        rMotor1.stop()
-        lMotor2.stop()
-        rMotor2.stop()
-        driveInches(-5,-5,50,50)
-        driveInches(6,-6,60,60)
-        driveInches(-48,-48,50,50)
+
 
 def user_control():
+    catapult()
     #user control
     brain.screen.clear_screen()
     controller.screen.print("user")
@@ -328,20 +303,8 @@ def user_control():
 
     ltMotor.set_stopping(HOLD)
     rtMotor.set_stopping(HOLD)
-    cataMotor.set_stopping(HOLD)
 
-    #init piston values
-    buttonYPrev = True
-    wingsBool = False
-    buttonXPrev = True
-    flipperBool = False
-    buttonUpPrev = True
-    intakeBool = False
-    macroPrev = False
-    macroBool = False
-    tempVar =False
     while True:
-
         wait(0.1,SECONDS) #switch to 100cps later
 
         #drivetrain
@@ -351,52 +314,25 @@ def user_control():
 
         #pistons
         PTOswitcher()
-        if controller.buttonY.pressing() and buttonYPrev == False:
-            if wingsBool == False: wingsBool = True
-            else: wingsBool = False #wings
-            wingsSolenoid.set(wingsBool)
-        buttonYPrev = controller.buttonY.pressing()
+        if controller.buttonR1.pressing(): wingsSolenoid.set(True)
+        elif controller.buttonR2.pressing(): wingsSolenoid.set(False)
 
-        if controller.buttonX.pressing() and buttonXPrev == False:
-            if flipperBool == False: flipperBool = True
-            else: flipperBool = False #flipper
-            flipperPiston.set(flipperBool)
-        buttonXPrev = controller.buttonX.pressing()
-
-        if controller.buttonUp.pressing() and buttonUpPrev == False:
-            if intakeBool == False: intakeBool = True
-            else: intakeBool = False #intake
-            intakeSolenoid.set(intakeBool)
-        buttonUpPrev = controller.buttonUp.pressing()
-
-        if controller.buttonDown.pressing() and controller.buttonB.pressing():
-            tempVar = True
-        while tempVar == True:
-            cataMotors(10)
-            if controller.buttonLeft.pressing():
-                tempVar = False
-
-        #intake
-        if controller.buttonL1.pressing(): intakeMotor.spin(FORWARD,12,VOLT)
-        elif controller.buttonL2.pressing(): intakeMotor.spin(REVERSE,12,VOLT)
-        else: intakeMotor.stop()
+        if controller.buttonL2.pressing(): intakeSolenoid.set(True)
+        elif controller.buttonL1.pressing(): intakeSolenoid.set(False)
 
         #drivetrain(lSpeed, rSpeed)
 
         brain.screen.clear_screen()
         brain.screen.set_cursor(1,1)
         xSpeed = controller.axis2.position() / 8
-        brain.screen.print(cataMotor.position(DEGREES) % 360)
 
         #cataMotors(xSpeed)
 
-
-
 #triggers
-
 pre_autonomous()
-if True: #set true for competition
+print("wakdf")
+if False: #set true for competition
     comp = Competition(user_control, autonomous)
 else:
-    autonomous()
+    #autonomous()
     user_control()
