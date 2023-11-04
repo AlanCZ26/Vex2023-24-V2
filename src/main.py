@@ -133,7 +133,7 @@ def cataAuto(num):
         cataMotors(0)
         r+=1
         print(r)
-        wait(0.5,SECONDS)
+        wait(0.25,SECONDS)
     
 
     """
@@ -270,9 +270,6 @@ def pre_autonomous():
     lMotor1.stop()
     lMotor2.stop()
     lMotor3.stop()
-    ltMotor.spin(FORWARD,6,VOLT)
-    rtMotor.spin(FORWARD,6,VOLT)
-    wait(0.4,SECONDS)
     ltMotor.spin(REVERSE,6,VOLT)
     rtMotor.spin(REVERSE,6,VOLT)
     wait(0.6,SECONDS)
@@ -339,7 +336,7 @@ def autonomous():
     ltMotor.set_stopping(HOLD)
     #left side: push alliance ball in, get ball out of corner, let go of ball, go touch pole
 
-    if True: #left side, corner side
+    if False: #left side, corner side
         driveInches(-8,0,20,20) #initial turn
         driveInches(-27,-27,30,30) #push ball towards side
         driveInches(8,0,30,30) #rotate to face
@@ -371,10 +368,12 @@ def autonomous():
         driveInches(0,5,70,70)
         driveInches(-12,12,50,50)
         driveInches(-6,-6,50,50)
-        driveInches(5,-5,50,50)
+        driveInches(2,-2,50,50)
+        drivetrain(-2,-2)
         intakeSolenoid.set(True)
         wait(0.8,SECONDS)
-        cataAuto(44)
+        cataAuto(50)
+        drivetrain(0,0)
     elif True: #right side, push under
         driveInches(0,-8,20,20) #initial turn
         driveInches(-27,-27,30,30) #push ball towards side
@@ -411,8 +410,8 @@ def user_control():
         if controller.buttonR1.pressing(): wingsSolenoid.set(True)
         elif controller.buttonR2.pressing(): wingsSolenoid.set(False)
 
-        if controller.buttonL2.pressing(): intakeSolenoid.set(True)
-        elif controller.buttonL1.pressing(): intakeSolenoid.set(False)
+        if controller.buttonL1.pressing(): intakeSolenoid.set(True)
+        elif controller.buttonL2.pressing(): intakeSolenoid.set(False)
         """
         if controller.buttonLeft.pressing() and controller.buttonA.pressing():
             lMotor1.temperature()
