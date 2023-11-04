@@ -35,8 +35,8 @@ lMotor1 = Motor(Ports.PORT18, GearSetting.RATIO_6_1, True)
 lMotor2 = Motor(Ports.PORT20, GearSetting.RATIO_6_1, True)
 lMotor3 = Motor(Ports.PORT10, GearSetting.RATIO_6_1, True)
 ltMotor = Motor(Ports.PORT7 , GearSetting.RATIO_6_1, True) #PTO motor
-rMotor1 = Motor(Ports.PORT11, GearSetting.RATIO_6_1, False)
-rMotor2 = Motor(Ports.PORT12, GearSetting.RATIO_6_1, False)
+rMotor1 = Motor(Ports.PORT12, GearSetting.RATIO_6_1, False)
+rMotor2 = Motor(Ports.PORT11, GearSetting.RATIO_6_1, False)
 rMotor3 = Motor(Ports.PORT9 , GearSetting.RATIO_6_1, False)
 rtMotor = Motor(Ports.PORT2 , GearSetting.RATIO_6_1, False)#PTO motor
 
@@ -102,19 +102,26 @@ def cataMotors(s):
 
 def catapult():
     global PTOvar
+    prevLow = 6
     while True:
         wait(0.2,SECONDS)
-        print("e")
         if PTOvar == 1:
             if controller.buttonX.pressing():
                 print("ran")
                 cataMotors(12)
-                wait(0.3,SECONDS)
-                while cataSensor.position() > 15:
-                    print(cataSensor.position())
+                sLow = 100      
+                while cataSensor.position() < 50:
+                    wait(0.01,SECONDS)
+                    #print(cataSensor.position())
+                    if cataSensor.position() <= sLow: sLow = cataSensor.position() #find lowest point
+                print("P1 done, lowest point was:")
+                print(sLow)
+                while cataSensor.position() > (prevLow + 6.5):
+                    #print(cataSensor.position())
                     wait(0.01,SECONDS) #100 = just shot, 0 = going to shoot, 10 = primed
                     #cataMotors(cataSensor.position()/2 + 5)
                 cataMotors(0)
+                prevLow = sLow
 
 
 
@@ -188,7 +195,7 @@ def driveInches(lInput,rInput,lSpd,rSpd):
 
     totalDiff = 3
     while totalDiff >= 2: #2 inches
-        print(totalDiff)
+        #print(totalDiff)
         wait(0.01,SECONDS)
         #converting from deg to inch
         rPos = (rMotor1.position(DEGREES) * (3 / 5)) * 0.02836160034 #3-5 ratio gearing on the wheels
@@ -198,28 +205,31 @@ def driveInches(lInput,rInput,lSpd,rSpd):
         DR = rInput - rPos
         DL = lInput - lPos #diffs
         totalDiff = abs(DR) + abs(DL)
-        print("d" + str(DR))
-        print(DL)
+        print("r" + str(DR))
+        print("l" + str(DL))
+        print(totalDiff)
         if abs(DR) >= 1:
             rMotor1.spin(FORWARD,rSpd*rdir,PERCENT)
             rMotor2.spin(FORWARD,rSpd*rdir,PERCENT)
+            rMotor3.spin(FORWARD,rSpd*rdir,PERCENT)
             if PTOvar == 0: rtMotor.spin(FORWARD,rSpd*rdir,PERCENT)
         else:
             rMotor1.stop()
             rMotor2.stop()
+            rMotor3.stop()
             if PTOvar == 0: rtMotor.stop()
         if abs(DL) >= 1:
             lMotor1.spin(FORWARD,lSpd*ldir,PERCENT)
             lMotor2.spin(FORWARD,lSpd*ldir,PERCENT)
+            lMotor3.spin(FORWARD,lSpd*ldir,PERCENT)
             if PTOvar == 0: ltMotor.spin(FORWARD,lSpd*ldir,PERCENT)
         else:
             lMotor1.stop()
             lMotor2.stop()
+            lMotor3.stop()
             if PTOvar == 0: ltMotor.stop()
     drivetrain(0,0)
     wait(0.3,SECONDS)
-
-    
 
 #control functions
 def pre_autonomous():
@@ -233,7 +243,6 @@ def pre_autonomous():
     #auton side value
     global n
     n = 3 #change value to change starting side, 1=L, 2=R, 3=driver
-    print("wawawa")
     #t1 = Thread(PTOswitcher)
     t2 = Thread(catapult)
     rMotor1.set_stopping(HOLD)
@@ -291,8 +300,20 @@ def autonomous():
     #auton
     brain.screen.clear_screen()
     brain.screen.print("autonomous code")
+    #right side: push in alliance ball, grab left ball, put in front of goal, 
+    #get center ball that's touching bar, turn, push that one along with the middle one and the other one in with wings
 
+    #left side: push alliance ball in, get ball out of corner, let go of ball, go touch pole
 
+    driveInches(4,4,90,90)
+    driveInches(-3.5,3.5,100,100)
+    driveInches(-32,-40,60,60)
+    drivetrain(-70,-70)
+    wait(0.3,SECONDS)
+    drivetrain(0,0)
+    #driveInches(19,19,100,100)
+    #driveInches(6.3,-6.3,80,80)
+    
 
 def user_control():
 
@@ -331,10 +352,9 @@ def user_control():
 
 #triggers
 pre_autonomous()
-print("wakdf")
-user_control()
+#user_control()
 if False: #set true for competition
     comp = Competition(user_control, autonomous)
 else:
-    #autonomous()
+    autonomous()
     user_control()
