@@ -9,7 +9,6 @@
 
 # Library imports
 from vex import *
-import math
 
 # Brain should be defined by default
 brain=Brain()
@@ -59,10 +58,10 @@ def drivetrain(lInput, rInput):
     rSpeed = rInput / 8
     if lInput == rInput == 0:
         lMotor1.stop()
-        rMotor1.stop()
         lMotor2.stop()
-        rMotor2.stop()
         lMotor3.stop()
+        rMotor1.stop()
+        rMotor2.stop()
         rMotor3.stop()
         if PTOvar ==0:
             ltMotor.stop()
@@ -85,10 +84,14 @@ def PTOswitcher():
         PTOvar = 0 #speed
         PTOpiston.set(False)
         flipperPiston.set(False)
+        ltMotor.stop()
+        rtMotor.stop()
     if controller.buttonUp.pressing():
         PTOvar = 1 #cata
         PTOpiston.set(True)
         flipperPiston.set(True)
+        ltMotor.stop()
+        rtMotor.stop()
     
 def cataMotors(s):
     print("spinning cata at " + str(s))
@@ -102,28 +105,36 @@ def cataMotors(s):
 
 def catapult():
     global PTOvar
-    prevLow = 6
     while True:
-        wait(0.2,SECONDS)
+        wait(0.001,SECONDS)
         if PTOvar == 1:
             if controller.buttonX.pressing():
                 print("ran")
                 cataMotors(12)
-                sLow = 100      
-                while cataSensor.position() < 50:
-                    wait(0.01,SECONDS)
+                wait(0.3,SECONDS)
+                #while cataSensor.position() < 30:
+                    #wait(0.01,SECONDS)
                     #print(cataSensor.position())
-                    if cataSensor.position() <= sLow: sLow = cataSensor.position() #find lowest point
-                print("P1 done, lowest point was:")
-                print(sLow)
-                while cataSensor.position() > (prevLow + 6.5):
-                    #print(cataSensor.position())
-                    wait(0.01,SECONDS) #100 = just shot, 0 = going to shoot, 10 = primed
-                    #cataMotors(cataSensor.position()/2 + 5)
-                cataMotors(0)
-                prevLow = sLow
-
-
+                if controller.buttonX.pressing() == False:
+                    while cataSensor.position() > (23):
+                        #print(cataSensor.position())
+                        wait(0.01,SECONDS) #100 = just shot, 0 = going to shoot, 10 = primed
+                        #cataMotors(cataSensor.position()/2 + 5)
+                    cataMotors(0)
+    
+def cataAuto(num):
+    global PTOvar
+    r = 0
+    while r < num:
+        cataMotors(12)
+        wait(0.3,SECONDS)
+        while cataSensor.position() > 23:
+            wait(0.01,SECONDS)
+        cataMotors(0)
+        r+=1
+        print(r)
+        wait(0.5,SECONDS)
+    
 
     """
     global PTOvar
@@ -247,10 +258,26 @@ def pre_autonomous():
     t2 = Thread(catapult)
     rMotor1.set_stopping(HOLD)
     rMotor2.set_stopping(HOLD)
+    rMotor3.set_stopping(HOLD)
     rtMotor.set_stopping(HOLD)
     lMotor1.set_stopping(HOLD)
-    lMotor2.set_stopping(HOLD)
+    rMotor2.set_stopping(HOLD)
+    lMotor3.set_stopping(HOLD)
     ltMotor.set_stopping(HOLD)
+    rMotor1.stop()
+    rMotor2.stop()
+    rMotor3.stop()
+    lMotor1.stop()
+    lMotor2.stop()
+    lMotor3.stop()
+    ltMotor.spin(FORWARD,6,VOLT)
+    rtMotor.spin(FORWARD,6,VOLT)
+    wait(0.4,SECONDS)
+    ltMotor.spin(REVERSE,6,VOLT)
+    rtMotor.spin(REVERSE,6,VOLT)
+    wait(0.6,SECONDS)
+    rtMotor.stop()
+    ltMotor.stop()
 
     Select = True #set to true to not run the loop
     if Select == False: #auton select menu
@@ -302,18 +329,63 @@ def autonomous():
     brain.screen.print("autonomous code")
     #right side: push in alliance ball, grab left ball, put in front of goal, 
     #get center ball that's touching bar, turn, push that one along with the middle one and the other one in with wings
-
+    rMotor1.set_stopping(HOLD)
+    rMotor2.set_stopping(HOLD)
+    rMotor3.set_stopping(HOLD)
+    rtMotor.set_stopping(HOLD)
+    lMotor1.set_stopping(HOLD)
+    rMotor2.set_stopping(HOLD)
+    lMotor3.set_stopping(HOLD)
+    ltMotor.set_stopping(HOLD)
     #left side: push alliance ball in, get ball out of corner, let go of ball, go touch pole
 
-    driveInches(4,4,90,90)
-    driveInches(-3.5,3.5,100,100)
-    driveInches(-32,-40,60,60)
-    drivetrain(-70,-70)
-    wait(0.3,SECONDS)
-    drivetrain(0,0)
-    #driveInches(19,19,100,100)
-    #driveInches(6.3,-6.3,80,80)
-    
+    if True: #left side, corner side
+        driveInches(-8,0,20,20) #initial turn
+        driveInches(-27,-27,30,30) #push ball towards side
+        driveInches(8,0,30,30) #rotate to face
+        driveInches(-7,-7,100,100) #slam
+        driveInches(0,3,80,80) #turn
+        driveInches(24,24,70,70) #go tw corner
+        driveInches(6.5,-6.5,80,80) #turn
+        driveInches(13,13,40,40) #go toward corner
+        intakeSolenoid.set(True)
+        wait(0.6,SECONDS)
+        driveInches(-10,-10,50,50) #leave
+        driveInches(8,-8,40,40)
+        intakeSolenoid.set(False)
+        driveInches(-14,14,40,40)
+        #driveInches(-8,8,40,40)
+        #driveInches(-5,5,70,70) #turn
+        driveInches(30,30,70,70) #square against wall
+        driveInches(-3,-3,50,50) #back to turn
+        driveInches(-9,9,70,70) #turn
+        driveInches(37,37,60,60) #touch pole
+    elif False: #skills
+        driveInches(-8,0,20,20) #initial turn
+        driveInches(-27,-27,30,30) #push ball towards side
+        driveInches(8,0,30,30) #rotate to face
+        driveInches(2,2,80,80)
+        cataAuto(1)
+        driveInches(-7,-7,100,100) #slam
+        driveInches(9,9,70,70)
+        driveInches(0,5,70,70)
+        driveInches(-12,12,50,50)
+        driveInches(-6,-6,50,50)
+        driveInches(5,-5,50,50)
+        intakeSolenoid.set(True)
+        wait(0.8,SECONDS)
+        cataAuto(44)
+    elif True: #right side, push under
+        driveInches(0,-8,20,20) #initial turn
+        driveInches(-27,-27,30,30) #push ball towards side
+        driveInches(0,8,30,30) #rotate to face
+        driveInches(2,2,80,80) #momentum
+        driveInches(-7,-7,100,100) #slam
+
+
+
+
+
 
 def user_control():
 
@@ -323,8 +395,8 @@ def user_control():
 
     global button
 
-    ltMotor.set_stopping(HOLD)
-    rtMotor.set_stopping(HOLD)
+    #ltMotor.set_stopping(HOLD)
+    #rtMotor.set_stopping(HOLD)
 
     while True:
         wait(0.1,SECONDS) #switch to 100cps later
@@ -341,19 +413,21 @@ def user_control():
 
         if controller.buttonL2.pressing(): intakeSolenoid.set(True)
         elif controller.buttonL1.pressing(): intakeSolenoid.set(False)
-
-        #drivetrain(lSpeed, rSpeed)
-
-        brain.screen.clear_screen()
-        brain.screen.set_cursor(1,1)
-        xSpeed = controller.axis2.position() / 8
-
-        #cataMotors(xSpeed)
+        """
+        if controller.buttonLeft.pressing() and controller.buttonA.pressing():
+            lMotor1.temperature()
+            lMotor1.temperature()
+            lMotor1.temperature()
+            rMotor1.temperature()
+            lMotor1.temperature()
+            lMotor1.temperature()
+            brain.screen.print()
+        """
 
 #triggers
 pre_autonomous()
 #user_control()
-if False: #set true for competition
+if True: #set true for competition
     comp = Competition(user_control, autonomous)
 else:
     autonomous()
