@@ -19,12 +19,15 @@ controller = Controller()
 
 """controls:
 x = shoot
-l1 = intake up
-l2 = intake down
+l1 = intake in
+l2 = intake out
 r1 = wings out
 r2 = wings in
-up = pto/flipper on (cata)
-down = pto to drive
+up = pto/lifter up
+down = lifter down/pto
+right arrow + y simultaneous = ratchet engage + lift
+b = toggle side flipper thing
+
 """
 
 
@@ -32,17 +35,20 @@ down = pto to drive
 
 lMotor1 = Motor(Ports.PORT18, GearSetting.RATIO_6_1, True)
 lMotor2 = Motor(Ports.PORT20, GearSetting.RATIO_6_1, True)
-lMotor3 = Motor(Ports.PORT10, GearSetting.RATIO_6_1, True)
 ltMotor = Motor(Ports.PORT7 , GearSetting.RATIO_6_1, True) #PTO motor
 rMotor1 = Motor(Ports.PORT12, GearSetting.RATIO_6_1, False)
 rMotor2 = Motor(Ports.PORT11, GearSetting.RATIO_6_1, False)
-rMotor3 = Motor(Ports.PORT9 , GearSetting.RATIO_6_1, False)
 rtMotor = Motor(Ports.PORT2 , GearSetting.RATIO_6_1, False)#PTO motor
 
-PTOpiston = DigitalOut(brain.three_wire_port.b)
-flipperPiston = DigitalOut(brain.three_wire_port.c)
-wingsSolenoid = DigitalOut(brain.three_wire_port.a)
-intakeSolenoid =DigitalOut(brain.three_wire_port.d)
+intMotor = Motor(Ports.PORT10, GearSetting.RATIO_6_1, False)
+cataMotor = Motor(Ports.PORT13, GearSetting.RATIO_36_1, False)
+
+wireExpander = Triport(Ports.PORT11)
+
+PTOpiston = DigitalOut(wireExpander.h)
+wingsSolenoid = DigitalOut(wireExpander.g)
+sidepiston = DigitalOut(wireExpander.f)
+ratchpiston = DigitalOut(wireExpander.e)
 
 cataSensor = Rotation(Ports.PORT6)
 
@@ -59,49 +65,50 @@ def drivetrain(lInput, rInput):
     if lInput == rInput == 0:
         lMotor1.stop()
         lMotor2.stop()
-        lMotor3.stop()
         rMotor1.stop()
         rMotor2.stop()
-        rMotor3.stop()
         if PTOvar ==0:
             ltMotor.stop()
             rtMotor.stop()
     else:
         lMotor1.spin(FORWARD,lSpeed,VOLT)
         lMotor2.spin(FORWARD,lSpeed,VOLT)
-        lMotor3.spin(FORWARD,lSpeed,VOLT)
         rMotor1.spin(FORWARD,rSpeed,VOLT)
         rMotor2.spin(FORWARD,rSpeed,VOLT)
-        rMotor3.spin(FORWARD,rSpeed,VOLT)
         if PTOvar == 0:
             ltMotor.spin(FORWARD,lSpeed,VOLT)    
             rtMotor.spin(FORWARD,rSpeed,VOLT)
 
 
-def PTOswitcher():
+def PTOswitcher(i): #t = speed, f = lifter
     global PTOvar
-    if controller.buttonDown.pressing():
+    if i:
         PTOvar = 0 #speed
         PTOpiston.set(False)
-        flipperPiston.set(False)
         ltMotor.stop()
         rtMotor.stop()
-    if controller.buttonUp.pressing():
-        PTOvar = 1 #cata
+    else:
+        PTOvar = 1 #lifter
         PTOpiston.set(True)
-        flipperPiston.set(True)
         ltMotor.stop()
         rtMotor.stop()
-    
-def cataMotors(s):
-    print("spinning cata at " + str(s))
-    if abs(s) <= 1: #to stop the motors & make sure it doesn't go backwards
+
+def PTOmotors(s):
+    if abs(s) == 0: #to stop the motors
         ltMotor.stop()
         rtMotor.stop()
     else:
         if PTOvar == 1:
-            ltMotor.spin(FORWARD,s,VOLT)    
+            ltMotor.spin(FORWARD,s,VOLT)
             rtMotor.spin(FORWARD,s,VOLT)
+    
+def cataMotors(s):
+    print("spinning cata at " + str(s))
+    if abs(s) <= 1: #to stop the motors & make sure it doesn't go backwards
+        cataMotor.stop()
+    else:
+        if PTOvar == 1:
+            cataMotor.spin(FORWARD,s,VOLT)
 
 def catapult():
     global PTOvar
@@ -135,59 +142,16 @@ def cataAuto(num):
         print(r)
         wait(0.25,SECONDS)
     
+def lifter(): #t = up, f = down
+    #have this as a thread: once called, control loop up/down until finished, then kill the thread
+    if controller.buttonUp.pressing():
+        PTOswitcher(False)
+        PTOmotors(12) #temp, have loop to make it go up until limit
+    elif controller.buttonDown.pressing():
+        PTOswitcher(True)
+        PTOmotors(-12) #same as above but in reverse
 
-    """
-    global PTOvar
-    running = True
-    global cataTrig
-    cataTrig = False #temp delete later
-    cataMotor.set_position(0,DEGREES)
-    n = 0
-    while True:
-        wait(0.01,SECONDS)
-        if controller.buttonR1.pressing() and PTOvar == 1:
-            cataMotors(12)
-            wait(0.2,SECONDS)
-            cataMotors(0)
-            wait(0.2,SECONDS)
-            s = 600
-            ltMotor.spin(FORWARD,s,RPM)    
-            rtMotor.spin(FORWARD,s,RPM)
-            cataMotor.spin(REVERSE,(s/3),RPM)  
 
-            pos = (cataMotor.position(DEGREES) % 360)
-            
-            while 340 > pos > 0:
-                pos = (cataMotor.position(DEGREES) % 360)
-                print(pos)
-                wait(0.01,SECONDS)
-                if controller.buttonR2.pressing(): break
-
-            cataMotors(0)
-        elif controller.buttonR2.pressing():
-            cataMotors(controller.axis2.position()/8)
-            cataMotor.set_position(0,DEGREES)
-        """"""
-        if controller.buttonR1.pressing(): 
-            running = True
-            cataTrig = True
-        wait(0.01,SECONDS)
-        while running == True:
-            wait(0.01,SECONDS)
-            pos = (cataMotor.position(DEGREES) % 360)
-            if cataTrig == True:
-                cataMotors(12)
-                wait(1,SECONDS)
-                cataTrig = False
-                print("aaa")
-            else:
-                n = pos #- 10
-                if n > 12: n = 12
-                cataMotors(n)
-                print(n)
-            if controller.buttonLeft.pressing(): running = False
-
-        """
 
 def driveInches(lInput,rInput,lSpd,rSpd):
     global PTOvar
@@ -222,31 +186,28 @@ def driveInches(lInput,rInput,lSpd,rSpd):
         if abs(DR) >= 1:
             rMotor1.spin(FORWARD,rSpd*rdir,PERCENT)
             rMotor2.spin(FORWARD,rSpd*rdir,PERCENT)
-            rMotor3.spin(FORWARD,rSpd*rdir,PERCENT)
             if PTOvar == 0: rtMotor.spin(FORWARD,rSpd*rdir,PERCENT)
         else:
             rMotor1.stop()
             rMotor2.stop()
-            rMotor3.stop()
             if PTOvar == 0: rtMotor.stop()
         if abs(DL) >= 1:
             lMotor1.spin(FORWARD,lSpd*ldir,PERCENT)
             lMotor2.spin(FORWARD,lSpd*ldir,PERCENT)
-            lMotor3.spin(FORWARD,lSpd*ldir,PERCENT)
             if PTOvar == 0: ltMotor.spin(FORWARD,lSpd*ldir,PERCENT)
         else:
             lMotor1.stop()
             lMotor2.stop()
-            lMotor3.stop()
             if PTOvar == 0: ltMotor.stop()
     drivetrain(0,0)
     wait(0.3,SECONDS)
 
 #control functions
 def pre_autonomous():
-    wingsSolenoid.set(False)
+    wingsSolenoid.set(False) #start with wings in
     PTOpiston.set(True) #start with cata mode
-    flipperPiston.set(True)#start with tilter up
+    sidepiston.set(False) #start with side up
+    ratchpiston.set(False) #start with ratchet up
     #pre auton
     #note to self add an auton side select thing
     brain.screen.clear_screen()
@@ -256,20 +217,17 @@ def pre_autonomous():
     n = 3 #change value to change starting side, 1=L, 2=R, 3=driver
     #t1 = Thread(PTOswitcher)
     t2 = Thread(catapult)
+    t3 = Thread(lifter)
     rMotor1.set_stopping(HOLD)
     rMotor2.set_stopping(HOLD)
-    rMotor3.set_stopping(HOLD)
     rtMotor.set_stopping(HOLD)
     lMotor1.set_stopping(HOLD)
     rMotor2.set_stopping(HOLD)
-    lMotor3.set_stopping(HOLD)
     ltMotor.set_stopping(HOLD)
     rMotor1.stop()
     rMotor2.stop()
-    rMotor3.stop()
     lMotor1.stop()
     lMotor2.stop()
-    lMotor3.stop()
     ltMotor.spin(REVERSE,6,VOLT)
     rtMotor.spin(REVERSE,6,VOLT)
     wait(0.6,SECONDS)
@@ -328,11 +286,9 @@ def autonomous():
     #get center ball that's touching bar, turn, push that one along with the middle one and the other one in with wings
     rMotor1.set_stopping(HOLD)
     rMotor2.set_stopping(HOLD)
-    rMotor3.set_stopping(HOLD)
     rtMotor.set_stopping(HOLD)
     lMotor1.set_stopping(HOLD)
     rMotor2.set_stopping(HOLD)
-    lMotor3.set_stopping(HOLD)
     ltMotor.set_stopping(HOLD)
     #left side: push alliance ball in, get ball out of corner, let go of ball, go touch pole
 
@@ -406,12 +362,12 @@ def user_control():
         drivetrain(lSpeed,rSpeed)
 
         #pistons
-        PTOswitcher()
         if controller.buttonR1.pressing(): wingsSolenoid.set(True)
         elif controller.buttonR2.pressing(): wingsSolenoid.set(False)
 
-        if controller.buttonL1.pressing(): intakeSolenoid.set(True)
-        elif controller.buttonL2.pressing(): intakeSolenoid.set(False)
+        if controller.buttonL1.pressing(): intMotor.spin(FORWARD,12,VOLT)
+        elif controller.buttonL2.pressing(): intMotor.spin(REVERSE,12,VOLT)
+        else: intMotor.stop()
         """
         if controller.buttonLeft.pressing() and controller.buttonA.pressing():
             lMotor1.temperature()
