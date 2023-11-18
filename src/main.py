@@ -57,6 +57,7 @@ PTOvar = 1 #0 = speed, 1 = cata, 2 = switching
 brain.screen.print("Hello V5")
 button = False
 autoCata = False
+liftVar = 0
 
 
 def drivetrain(lInput, rInput):
@@ -129,9 +130,10 @@ def catapult():
 
 def lifter():
     #have this as a thread: once called, control loop up/down until finished, then kill the thread
+    global liftVar #1 = up, 2 = down, 0 = none
     while True:
         wait(0.1,SECONDS)
-        if controller.axis2.position() > 90:
+        if controller.axis2.position() > 90 or liftVar == 1:
             PTOswitcher(False)
             ratchPiston.set(False)
             ltMotor.set_stopping(BRAKE)
@@ -143,7 +145,8 @@ def lifter():
                 i+=1
             wait(0.05,SECONDS)
             PTOmotors(0)
-        elif controller.axis2.position() < -90:
+            liftVar = 0
+        elif controller.axis2.position() < -90 or liftVar == 2:
             PTOmotors(-12) #same as above but in reverse  
             ltMotor.set_stopping(COAST)
             rtMotor.set_stopping(COAST)
@@ -154,7 +157,7 @@ def lifter():
             wait(0.05,SECONDS)
             PTOmotors(0)
             PTOswitcher(True)
-
+            liftVar = 0
 
 def driveInches(lInput,rInput,lSpd,rSpd):
     global PTOvar
@@ -345,6 +348,8 @@ def pre_autonomous():
                 controller.screen.clear_screen()
 
 def autonomous():
+    global autoCata
+    global liftVar
     st = BRAKE
     rMotor1.set_stopping(st)
     rMotor2.set_stopping(st)
@@ -395,7 +400,63 @@ def autonomous():
         sidePiston.set(True)
         wait(0.1,SECONDS)
         rotDeg(45)
-    
+    elif True:
+        rotDeg(45)
+        driveDist(-16)
+        liftVar = 1
+        rotDeg(-70)
+        sidePiston.set(True)
+        autoCata = True
+        wait(3,SECONDS)
+        autoCata = False
+        sidePiston.set(False)        
+        wait(0.1,SECONDS)        
+        liftVar = 2
+        driveDist(5)#backup
+        rotDeg(60) #face pole
+        driveDist(30)
+        rotDeg(-135) #straighten
+        drivetrain(-60,-60)
+        wait(0.5,SECONDS)
+        drivetrain(0,0)
+        driveDist(5)
+        rotDeg(-93)
+        driveDist(-70)
+        rotDeg(-45)
+        #driveDist(-40)
+        #rotDeg(-45)
+        drivetrain(-70,-50)
+        wait(0.9,SECONDS)
+        drivetrain(0,0)
+        
+        driveDist(-18) #welcome to the jam
+        driveDist(12)
+        driveDist(-18)
+        driveDist(12)
+        driveDist(-18)
+        driveDist(16)
+        
+        rotDeg(-60) #face mid
+        driveDist(-48)
+        rotDeg(-30)
+        drivetrain(-40,-40)
+        wait(0.8,SECONDS)
+        drivetrain(0,0)
+        wingsSolenoid.set(True)
+        intMotor.spin(REVERSE)
+        wait(0.1,SECONDS)
+        driveDist(25)
+        driveDist(-12)
+        driveDist(18)
+        driveDist(-12)
+        driveDist(18)
+        
+
+
+
+
+
+
 
     """
     if False: #left side, corner side
