@@ -117,11 +117,11 @@ def catapult():
     while True:
         wait(0.01,SECONDS)
         if controller.buttonX.pressing() or (cataDist.object_distance(MM) < 20 and autoCata == True):
-            if not controller.buttonX.pressing(): wait(0.1,SECONDS)
+            if not controller.buttonX.pressing(): wait(0.05,SECONDS)
             cataMotors(12)
             wait(0.1,SECONDS)
             cataMotors(0)
-            wait(0.05,SECONDS)
+            wait(0.03,SECONDS)
             cataMotors(12)
             if controller.buttonX.pressing() == False:
                 while limit.value() == 1:
@@ -135,7 +135,9 @@ def lifter():
         wait(0.1,SECONDS)
         if controller.axis2.position() > 90 or liftVar == 1:
             PTOswitcher(False)
-            ratchPiston.set(False)
+            ratchPiston.set(True)
+            controller.screen.print("F")
+            controller.screen.set_cursor(0,0)
             ltMotor.set_stopping(BRAKE)
             rtMotor.set_stopping(BRAKE)
             PTOmotors(12) #loop to make it go up until limit
@@ -278,7 +280,7 @@ def pre_autonomous():
     wingsSolenoid.set(False) #start with wings in
     PTOpiston.set(True) #start with lift mode
     sidePiston.set(False) #start with side up
-    ratchPiston.set(False) #start with ratchet up
+    ratchPiston.set(True) #start with ratchet up
     #pre auton
     brain.screen.clear_screen()
     brain.screen.print("pre auton code")
@@ -377,7 +379,7 @@ def autonomous():
         #driveDist(18)
         drivetrain(80,80)
         wait(0.3,SECONDS)
-        intMotor.spin(REVERSE,11,VOLT)
+        intMotor.spin(REVERSE,6,VOLT)
         wait(0.3,SECONDS)
         drivetrain(-60,-60)
         wait(0.2,SECONDS)
@@ -386,7 +388,6 @@ def autonomous():
         drivetrain(-100,-100)
         wait(0.1,SECONDS)
         driveDist(-6)
-        intMotor.stop()
         rotDeg(180)
         wingsSolenoid.set(True)
         intMotor.spin(REVERSE,11,VOLT)
@@ -407,7 +408,7 @@ def autonomous():
         rotDeg(-70)
         sidePiston.set(True)
         autoCata = True
-        wait(3,SECONDS)
+        wait(40,SECONDS)
         autoCata = False
         sidePiston.set(False)        
         wait(0.1,SECONDS)        
@@ -450,14 +451,7 @@ def autonomous():
         driveDist(18)
         driveDist(-12)
         driveDist(18)
-        
-
-
-
-
-
-
-
+    
     """
     if False: #left side, corner side
         driveInches(-8,0,20,20) #initial turn
@@ -505,6 +499,7 @@ def autonomous():
         driveInches(-7,-7,100,100) #slam
     """
 def user_control():
+
     st = COAST
     rMotor1.set_stopping(st)
     rMotor2.set_stopping(st)
@@ -517,6 +512,7 @@ def user_control():
     controller.screen.print("user")
     global button
     global autoCata
+    global liftVar
 
     #ltMotor.set_stopping(HOLD)
     #rtMotor.set_stopping(HOLD)
@@ -525,9 +521,24 @@ def user_control():
     pWings = False
     tFlip = False
     pFlip = False
-    tRatch = False
+    tRatch = True
     pRatch = False
     pCatAut = False
+    if False:
+        rotDeg(45)
+        driveDist(-16)
+        liftVar = 1
+        rotDeg(-70)
+        sidePiston.set(True)
+        autoCata = True
+        wait(30,SECONDS)
+        autoCata = False
+        sidePiston.set(False)        
+        wait(0.1,SECONDS)        
+        liftVar = 2
+        driveDist(5)#backup
+        rotDeg(60) #face pole
+        driveDist(30)
     while True:
         wait(0.1,SECONDS) #switch to 100cps later
 
@@ -553,11 +564,15 @@ def user_control():
                 tFlip = True
         if controller.buttonRight.pressing() and pRatch == False: 
             if tRatch: 
-                ratchPiston.set(True)
-                tRatch = False
-            else: 
                 ratchPiston.set(False)
+                tRatch = False
+                controller.screen.print("Ratchet is on")
+                controller.screen.set_cursor(0,0)
+            else: 
+                ratchPiston.set(True)
                 tRatch = True
+                controller.screen.print("F")
+                controller.screen.set_cursor(0,0)
         if controller.buttonY.pressing() and pCatAut == False: 
             if autoCata: autoCata = False
             else: autoCata = True
@@ -572,6 +587,7 @@ def user_control():
         pWings = controller.buttonR1.pressing()
         pFlip = controller.buttonR2.pressing()
         pRatch = controller.buttonRight.pressing()
+        pCatAut = controller.buttonY.pressing()
 
         """
         if controller.buttonLeft.pressing() and controller.buttonA.pressing():
