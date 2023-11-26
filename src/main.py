@@ -117,6 +117,7 @@ def catapult():
     while True:
         wait(0.01,SECONDS)
         if controller.buttonX.pressing() or (cataDist.object_distance(MM) < 20 and autoCata == True):
+            
             if not controller.buttonX.pressing(): wait(0.05,SECONDS)
             cataMotors(12)
             wait(0.1,SECONDS)
