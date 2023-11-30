@@ -32,25 +32,29 @@ r2 = toggle side flipper thing
 
 #motors
 
-lMotor1 = Motor(Ports.PORT2, GearSetting.RATIO_6_1, True)
-lMotor2 = Motor(Ports.PORT6, GearSetting.RATIO_6_1, True)
-ltMotor = Motor(Ports.PORT7, GearSetting.RATIO_6_1, True) #PTO motor
-rMotor1 = Motor(Ports.PORT1, GearSetting.RATIO_6_1, False)
-rMotor2 = Motor(Ports.PORT3, GearSetting.RATIO_6_1, False)
-rtMotor = Motor(Ports.PORT8, GearSetting.RATIO_6_1, False)#PTO motor
+lMotor1 = Motor(Ports.PORT12, GearSetting.RATIO_6_1, True)
+lMotor2 = Motor(Ports.PORT13, GearSetting.RATIO_6_1, True)
+ltMotor = Motor(Ports.PORT3, GearSetting.RATIO_6_1, True) #PTO motor
+rMotor1 = Motor(Ports.PORT19, GearSetting.RATIO_6_1, False)
+rMotor2 = Motor(Ports.PORT20, GearSetting.RATIO_6_1, False)
+rtMotor = Motor(Ports.PORT10, GearSetting.RATIO_6_1, False)#PTO motor
 
-intMotor = Motor(Ports.PORT9, GearSetting.RATIO_6_1, True)
-cataMotor = Motor(Ports.PORT13, GearSetting.RATIO_36_1, False)
-liftSens = Rotation(Ports.PORT12)
-cataDist = Distance(Ports.PORT14)
-gyro = Inertial(Ports.PORT10)
+intMotor = Motor(Ports.PORT18, GearSetting.RATIO_6_1, True)
+cataMotor = Motor(Ports.PORT2, GearSetting.RATIO_36_1, False)
+liftSens = Rotation(Ports.PORT16)
+cataDist = Distance(Ports.PORT1)
+gyro = Inertial(Ports.PORT6)
 
-wireExpander = Triport(Ports.PORT11)
-PTOpiston = DigitalOut(wireExpander.h)
-wingsSolenoid = DigitalOut(wireExpander.g)
+wireExpander = Triport(Ports.PORT17)
+PTOpiston = DigitalOut(brain.three_wire_port.h)
+wingsSolenoid = DigitalOut(wireExpander.h)
+wingsSolenoid2 = DigitalOut(wireExpander.f)
 sidePiston = DigitalOut(wireExpander.e)
-ratchPiston = DigitalOut(wireExpander.f)
-limit = DigitalIn(brain.three_wire_port.h)
+ratchPiston = DigitalOut(wireExpander.d)
+limit = DigitalIn(wireExpander.g)
+
+intakePiston = DigitalOut(brain.three_wire_port.d)
+
 
 #variables
 PTOvar = 1 #0 = speed, 1 = cata, 2 = switching
@@ -85,12 +89,12 @@ def PTOswitcher(i): #t = speed, f = lifter
     global PTOvar
     if i:
         PTOvar = 0 #speed
-        PTOpiston.set(False)
+        PTOpiston.set(True)
         ltMotor.stop()
         rtMotor.stop()
     else:
         PTOvar = 1 #lifter
-        PTOpiston.set(True)
+        PTOpiston.set(False)
         ltMotor.stop()
         rtMotor.stop()
 
@@ -112,16 +116,14 @@ def cataMotors(s):
             cataMotor.spin(FORWARD,s,VOLT)
 
 def catapult():
-    global PTOvar
     global autoCata
     while True:
         wait(0.01,SECONDS)
         if controller.buttonX.pressing() or (cataDist.object_distance(MM) < 20 and autoCata == True):
-            
             if not controller.buttonX.pressing(): wait(0.05,SECONDS)
             cataMotors(12)
             wait(0.1,SECONDS)
-            cataMotors(0)
+            #cataMotors(0)
             wait(0.03,SECONDS)
             cataMotors(12)
             if controller.buttonX.pressing() == False:
@@ -154,7 +156,7 @@ def lifter():
             ltMotor.set_stopping(COAST)
             rtMotor.set_stopping(COAST)
             i = 0          
-            while (liftSens.position() % 360) > 5 and i < 30:
+            while (liftSens.position() % 360) > 10 and i < 30:
                 wait(0.1,SECONDS)
                 i+=1
             wait(0.05,SECONDS)
@@ -279,7 +281,7 @@ def rotDeg(target):
 def pre_autonomous():
     gyro.calibrate
     wingsSolenoid.set(False) #start with wings in
-    PTOpiston.set(True) #start with lift mode
+    PTOpiston.set(False) #start with lift mode
     sidePiston.set(False) #start with side up
     ratchPiston.set(True) #start with ratchet up
     #pre auton
@@ -525,6 +527,10 @@ def user_control():
     tRatch = True
     pRatch = False
     pCatAut = False
+
+    tInt = False
+    pInt = False
+
     if False:
         rotDeg(45)
         driveDist(-16)
@@ -552,9 +558,11 @@ def user_control():
         if controller.buttonR1.pressing() and pWings == False: 
             if tWings: 
                 wingsSolenoid.set(True)
+                wingsSolenoid2.set(True)
                 tWings = False
             else: 
                 wingsSolenoid.set(False)
+                wingsSolenoid2.set(False)
                 tWings = True
         if controller.buttonR2.pressing() and pFlip == False: 
             if tFlip: 
@@ -567,7 +575,7 @@ def user_control():
             if tRatch: 
                 ratchPiston.set(False)
                 tRatch = False
-                controller.screen.print("Ratchet is on")
+                controller.screen.print("R")
                 controller.screen.set_cursor(0,0)
             else: 
                 ratchPiston.set(True)
@@ -577,6 +585,14 @@ def user_control():
         if controller.buttonY.pressing() and pCatAut == False: 
             if autoCata: autoCata = False
             else: autoCata = True
+
+        if controller.buttonUp.pressing() and pInt == False:
+            if tInt == True: tInt = False
+            else: tInt = True
+            if tInt: intakePiston.set(True)
+            else: intakePiston.set(False)
+        pInt = controller.buttonUp.pressing()
+
         if controller.buttonL1.pressing(): intMotor.spin(FORWARD,12,VOLT)
         elif controller.buttonL2.pressing(): intMotor.spin(REVERSE,12,VOLT)
         else: intMotor.stop()
