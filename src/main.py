@@ -18,20 +18,20 @@ controller = Controller()
 
 
 """controls:
-x = shoot
+x = shoot, hold x to continue shooting
 l1 = intake in
 l2 = intake out
 r1 = wings toggle
 up = pto/lifter up
 down = lifter down/pto
-right arrow + y simultaneous = ratchet engage + lift
+downarrow = ratchet down
+rightarrow = ratchet up
 r2 = toggle side flipper thing
 
 """
 
-
+defaultBrakeMode = BRAKE
 #motors
-
 lMotor1 = Motor(Ports.PORT12, GearSetting.RATIO_6_1, True)
 lMotor2 = Motor(Ports.PORT13, GearSetting.RATIO_6_1, True)
 ltMotor = Motor(Ports.PORT3, GearSetting.RATIO_6_1, True) #PTO motor
@@ -63,6 +63,11 @@ button = False
 autoCata = False
 liftVar = 0
 
+def setDriveStopping(s):
+    rMotor1.set_stopping(s)
+    rMotor2.set_stopping(s)
+    lMotor1.set_stopping(s)
+    rMotor2.set_stopping(s)
 
 def drivetrain(lInput, rInput):
     global PTOvar
@@ -106,14 +111,6 @@ def PTOmotors(s):
         else:
             ltMotor.spin(FORWARD,s,VOLT)
             rtMotor.spin(FORWARD,s,VOLT)
-    
-def cataMotors(s):
-    #print("spinning cata at " + str(s))
-    if abs(s) <= 1: #to stop the motors & make sure it doesn't go backwards
-        cataMotor.stop()
-    else:
-        if PTOvar == 1:
-            cataMotor.spin(FORWARD,s,VOLT)
 
 def catapult():
     global autoCata
@@ -121,15 +118,12 @@ def catapult():
         wait(0.01,SECONDS)
         if controller.buttonX.pressing() or (cataDist.object_distance(MM) < 20 and autoCata == True):
             if not controller.buttonX.pressing(): wait(0.05,SECONDS)
-            cataMotors(12)
+            cataMotor.spin(FORWARD,12,VOLT)
             wait(0.1,SECONDS)
-            #cataMotors(0)
-            wait(0.03,SECONDS)
-            cataMotors(12)
-            if controller.buttonX.pressing() == False:
-                while limit.value() == 1:
-                    wait(0.01,SECONDS)
-                cataMotors(0)
+            while limit.value() == 1:
+                wait(0.01,SECONDS)
+            if not (controller.buttonX.pressing() or (cataDist.object_distance(MM) < 20 and autoCata == True)):
+                cataMotor.stop()
 
 def lifter():
     #have this as a thread: once called, control loop up/down until finished, then kill the thread
@@ -137,8 +131,9 @@ def lifter():
     while True:
         wait(0.1,SECONDS)
         if controller.axis2.position() > 90 or liftVar == 1:
+            setDriveStopping(BRAKE)
             PTOswitcher(False)
-            ratchPiston.set(True)
+            ratchPiston.set(False)
             controller.screen.print("F")
             controller.screen.set_cursor(0,0)
             ltMotor.set_stopping(BRAKE)
@@ -153,8 +148,9 @@ def lifter():
             liftVar = 0
         elif controller.axis2.position() < -90 or liftVar == 2:
             PTOmotors(-12) #same as above but in reverse  
-            ltMotor.set_stopping(COAST)
-            rtMotor.set_stopping(COAST)
+            ltMotor.set_stopping(defaultBrakeMode)
+            rtMotor.set_stopping(defaultBrakeMode)
+            setDriveStopping(defaultBrakeMode)
             i = 0          
             while (liftSens.position() % 360) > 10 and i < 30:
                 wait(0.1,SECONDS)
@@ -281,18 +277,19 @@ def rotDeg(target):
 def pre_autonomous():
     gyro.calibrate
     wingsSolenoid.set(False) #start with wings in
+    wingsSolenoid2.set(False)
     PTOpiston.set(False) #start with lift mode
     sidePiston.set(False) #start with side up
-    ratchPiston.set(True) #start with ratchet up
+    ratchPiston.set(False) #start with ratchet up
     #pre auton
     brain.screen.clear_screen()
     brain.screen.print("pre auton code")
     #auton side value
     global n
     n = 3 #change value to change starting side, 1=L, 2=R, 3=driver
-    #t1 = Thread(PTOswitcher)
     t2 = Thread(catapult)
     t3 = Thread(lifter)
+    setDriveStopping(defaultBrakeMode)
     rMotor1.stop()
     rMotor2.stop()
     lMotor1.stop()
@@ -301,13 +298,6 @@ def pre_autonomous():
     cataMotor.set_stopping(HOLD)
     intMotor.set_stopping(HOLD)
     wait(2,SECONDS)
-    """
-    ltMotor.spin(REVERSE,6,VOLT)
-    rtMotor.spin(REVERSE,6,VOLT)
-    wait(0.6,SECONDS)
-    rtMotor.stop()
-    ltMotor.stop()
-    """
     Select = True #set to true to not run the loop
     if Select == False: #auton select menu
         n = 1
@@ -355,13 +345,6 @@ def pre_autonomous():
 def autonomous():
     global autoCata
     global liftVar
-    st = BRAKE
-    rMotor1.set_stopping(st)
-    rMotor2.set_stopping(st)
-    rtMotor.set_stopping(st)
-    lMotor1.set_stopping(st)
-    rMotor2.set_stopping(st)
-    ltMotor.set_stopping(st)
     #auton
     brain.screen.clear_screen()
     brain.screen.print("autonomous code")
@@ -501,15 +484,24 @@ def autonomous():
         driveInches(2,2,80,80) #momentum
         driveInches(-7,-7,100,100) #slam
     """
-def user_control():
 
-    st = COAST
-    rMotor1.set_stopping(st)
-    rMotor2.set_stopping(st)
-    rtMotor.set_stopping(st)
-    lMotor1.set_stopping(st)
-    rMotor2.set_stopping(st)
-    ltMotor.set_stopping(st)
+class risingEdgeInput():
+    def __init__(self, inputButton, output, startingState) -> None:
+        self.inputButton = inputButton
+        self.output = output
+        self.previous = False
+        self.state = startingState
+        controller.axis1
+
+    def tick(self,input):
+        if self.previous == False and input == True:
+            self.state = not self.state
+            self.previous = input
+            return self.state
+
+
+
+def user_control():
     #user control
     brain.screen.clear_screen()
     controller.screen.print("user")
