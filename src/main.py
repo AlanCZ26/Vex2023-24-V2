@@ -116,14 +116,15 @@ def catapult():
     global autoCata
     while True:
         wait(0.01,SECONDS)
+        if not (controller.buttonX.pressing() or (cataDist.object_distance(MM) < 20 and autoCata == True)):
+            cataMotor.stop()
         if controller.buttonX.pressing() or (cataDist.object_distance(MM) < 20 and autoCata == True):
-            if not controller.buttonX.pressing(): wait(0.05,SECONDS)
+            #if not controller.buttonX.pressing(): wait(0.05,SECONDS)
             cataMotor.spin(FORWARD,12,VOLT)
-            wait(0.1,SECONDS)
+            wait(0.2,SECONDS)
             while limit.value() == 1:
                 wait(0.01,SECONDS)
-            if not (controller.buttonX.pressing() or (cataDist.object_distance(MM) < 20 and autoCata == True)):
-                cataMotor.stop()
+
 
 def lifter():
     #have this as a thread: once called, control loop up/down until finished, then kill the thread
@@ -218,14 +219,15 @@ def driveDist(target):
     proportional = 3
     integral = 0
     prevProp = 0
-    gyro.reset_rotation()
+    previousGyro = gyro.rotation()
     Kp = 0.8
     Ki = 0
     Kd = 0
     error = target + 0.1
     errorPrev = abs(target)
     timer = 200
-    while abs(errorPrev) > 3 and (error != errorPrev) and timer > 0:
+    while abs(errorPrev) > 1.5 and (error != errorPrev) and timer > 0:
+        print("test")
         timer -= 1
         wait(0.01,SECONDS)
         measure = (lMotor1.position(DEGREES)+lMotor2.position(DEGREES)+rMotor1.position(DEGREES)+rMotor2.position(DEGREES))*0.00425424005
@@ -237,7 +239,7 @@ def driveDist(target):
         prevProp = proportional
 
         error = proportional * Kp + integral * Ki + derivative * Kd
-        errorRot = gyro.rotation() * 0.1
+        errorRot = (gyro.rotation() - previousGyro) * 0.1
         lOut = error - errorRot
         rOut = error + errorRot
         if 0 < lOut < 2: lOut = 2 #min values
@@ -251,20 +253,30 @@ def driveDist(target):
     drivetrain(0,0)
     wait(0.1,SECONDS)
 
+absoluteAngle = 0
 def rotDeg(target):
+    global absoluteAngle
+    absoluteAngle += target
+    print(target)
     print("New rotation instruction: " + str(target))
-    gyro.reset_rotation()
+    target = absoluteAngle
+    print(absoluteAngle)
+    print(gyro.rotation())
     error = 100
     prevErr = abs(target)
     timer = 150
-    while abs(prevErr) > 4 and timer > 0:
+    while abs(prevErr) > 2 and timer > 0:
         timer -= 1
         wait(0.01,SECONDS)
         rot = gyro.rotation()
         error = target - rot
-        output = error * 0.25
-        if 0 < output < 3: output = 3 #min values
-        elif 0 > output > 3: output = -3
+        output = error * 0.8
+        sub = 3
+        if output > 0: output -= sub
+        else: output += sub
+        mv = 3
+        if 0 < output < mv: output = mv #min values
+        elif 0 > output > mv: output = -mv
         drivetrain(output*8,output*-8)
         print(error)
         print(timer)
@@ -345,12 +357,38 @@ def pre_autonomous():
 def autonomous():
     global autoCata
     global liftVar
+    global absoluteAngle
+    setDriveStopping(BRAKE)
     #auton
     brain.screen.clear_screen()
     brain.screen.print("autonomous code")
     #right side: push in alliance ball, grab left ball, put in front of goal, 
     #get center ball that's touching bar, turn, push that one along with the middle one and the other one in with wings
     #left side: push alliance ball in, get ball out of corner, let go of ball, go touch pole
+    
+    driveDist(-14)
+    rotDeg(-70)
+    sidePiston.set(True)
+    autoCata = True
+    wait(3,SECONDS)
+    sidePiston.set(False)
+    wait(0.1,SECONDS)
+    autoCata = False
+    driveDist(3)
+    rotDeg(55)
+    driveDist(18)
+    rotDeg(-115)
+    drivetrain(-80,-80)
+    wait(0.8,SECONDS)
+    print(absoluteAngle)
+    print("ABS ANGLE RESET")
+    absoluteAngle = -135
+    drivetrain(0,0)
+    driveDist(5)
+    rotDeg(-90)
+
+
+    """
     if True:
         sidePiston.set(True)
         wait(0.1,SECONDS)
@@ -437,7 +475,7 @@ def autonomous():
         driveDist(18)
         driveDist(-12)
         driveDist(18)
-    
+    """
     """
     if False: #left side, corner side
         driveInches(-8,0,20,20) #initial turn
@@ -485,6 +523,7 @@ def autonomous():
         driveInches(-7,-7,100,100) #slam
     """
 
+"""
 class risingEdgeInput():
     def __init__(self, inputButton, output, startingState) -> None:
         self.inputButton = inputButton
@@ -498,7 +537,7 @@ class risingEdgeInput():
             self.state = not self.state
             self.previous = input
             return self.state
-
+"""
 
 
 def user_control():
