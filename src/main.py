@@ -256,13 +256,15 @@ def driveDist(target):
 absoluteAngle = 0
 
 def rotCall(target):
-    if True: #abs(target) == 90:
-        rotDeg(target, 0.19, 0.0, 1, 0, 2, 5)
+    if abs(target) == 90: #tuned 90 degree turn, 700ms either direction
+        rotDeg(target, 0.19, 0.0, 1, 80, 2, 5)
         #rotDeg(target,0.6,0,0,0,3,0)
         #Ku = 2, Tu = 400 MS
         #Tu data: 103 - 81 - 63, 144 - 122 - 103
+    else: #default
+        rotDeg(target, 0.19, 0.0, 1, target * 1.5 + 10, 2, 5)
 
-def rotDeg(target, Kp, Ki, Kd, sub, mv, iw):
+def rotDeg(target, Kp, Ki, Kd, timer, mv, iw):
     global absoluteAngle
     absoluteAngle += target
     print("New rotation instruction: " + str(target))
@@ -273,7 +275,6 @@ def rotDeg(target, Kp, Ki, Kd, sub, mv, iw):
     integral = 0
     prevErr = abs(target - gyro.rotation()) 
     realPrevErr = prevErr
-    timer = 120
     startingTime = timer
     listP = []
     listI = []
