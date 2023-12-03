@@ -254,35 +254,78 @@ def driveDist(target):
     wait(0.1,SECONDS)
 
 absoluteAngle = 0
-def rotDeg(target):
+
+def rotCall(target):
+    if True: #abs(target) == 90:
+        rotDeg(target, 0.19, 0.0, 1, 0, 2, 5)
+        #rotDeg(target,0.6,0,0,0,3,0)
+        #Ku = 2, Tu = 400 MS
+        #Tu data: 103 - 81 - 63, 144 - 122 - 103
+
+def rotDeg(target, Kp, Ki, Kd, sub, mv, iw):
     global absoluteAngle
     absoluteAngle += target
-    print(target)
     print("New rotation instruction: " + str(target))
     target = absoluteAngle
-    print(absoluteAngle)
-    print(gyro.rotation())
+    print("New absolute angle: "+ str(absoluteAngle))
+    print("Current rotation: " + str(gyro.rotation()))
     error = 100
-    prevErr = abs(target)
-    timer = 150
-    while abs(prevErr) > 2 and timer > 0:
+    integral = 0
+    prevErr = abs(target - gyro.rotation()) 
+    realPrevErr = prevErr
+    timer = 120
+    startingTime = timer
+    listP = []
+    listI = []
+    listD = []
+    listO = []
+    listR = []
+    while abs(prevErr) > 0.5 and timer > 0: #and prevErr != error:
         timer -= 1
         wait(0.01,SECONDS)
         rot = gyro.rotation()
         error = target - rot
-        output = error * 0.8
-        sub = 3
-        if output > 0: output -= sub
-        else: output += sub
-        mv = 3
-        if 0 < output < mv: output = mv #min values
-        elif 0 > output > mv: output = -mv
+        integral += error
+        if (integral * Ki) > iw: integral = iw / Ki
+        derivative = error - realPrevErr
+        realPrevErr = error
+        output = (error * Kp) + (integral * Ki) + (derivative * Kd)
+        #if output > sub: output -= sub
+        #elif output < -sub: output += sub
+        if output > 0 and output < mv: output = mv #min values
+        elif output < 0 and output > -mv: output = (-1*mv)
+        listP.append(round(error * Kp,2))
+        listI.append(round(integral * Ki,2))
+        listD.append(round(derivative * Kd,2))
+        listO.append(round(error,2))
+        listR.append(round(output,2))        
         drivetrain(output*8,output*-8)
         print(error)
         print(timer)
-        prevErr = (prevErr * 9 + abs(error)) / 10
+        prevErr = (prevErr * 2 + abs(error)) / 3
+    if timer == 0: print("TIMED OUT")
+    else:
+        print("COMMAND: " + str(target)) 
+        print("TOOK " + str(startingTime - timer) + "0 MS")
     drivetrain(0,0)
-    wait(0.1,SECONDS)
+    #wait(0.1,SECONDS)
+    wait(1,SECONDS)
+    #print(listP)
+    print("-----------------------")
+    wait(0.2,SECONDS)
+    print(listI)
+    print("-----------------------")
+    wait(0.2,SECONDS)
+    print(listD)
+    print("-----------------------")
+    wait(0.2,SECONDS)
+    print(listO)
+    print("-----------------------")
+    wait(0.2,SECONDS)
+    print(listR)
+    print("-----------------------")
+    wait(0.2,SECONDS)
+
 
 
 #control functions
@@ -366,26 +409,34 @@ def autonomous():
     #get center ball that's touching bar, turn, push that one along with the middle one and the other one in with wings
     #left side: push alliance ball in, get ball out of corner, let go of ball, go touch pole
     
-    driveDist(-14)
-    rotDeg(-70)
-    sidePiston.set(True)
-    autoCata = True
-    wait(3,SECONDS)
-    sidePiston.set(False)
-    wait(0.1,SECONDS)
-    autoCata = False
-    driveDist(3)
-    rotDeg(55)
-    driveDist(18)
-    rotDeg(-115)
-    drivetrain(-80,-80)
-    wait(0.8,SECONDS)
-    print(absoluteAngle)
-    print("ABS ANGLE RESET")
-    absoluteAngle = -135
-    drivetrain(0,0)
-    driveDist(5)
-    rotDeg(-90)
+    if True:
+        rotCall(-90)
+        wait(1,SECONDS)
+        rotCall(90)
+        wait(5,SECONDS)
+        rotCall(-45)
+        rotCall(45)
+    elif True:
+        driveDist(-14)
+        rotDeg(-70)
+        sidePiston.set(True)
+        autoCata = True
+        wait(3,SECONDS)
+        sidePiston.set(False)
+        wait(0.1,SECONDS)
+        autoCata = False
+        driveDist(3)
+        rotDeg(55)
+        driveDist(18)
+        rotDeg(-115)
+        drivetrain(-80,-80)
+        wait(0.8,SECONDS)
+        print(absoluteAngle)
+        print("ABS ANGLE RESET")
+        absoluteAngle = -135
+        drivetrain(0,0)
+        driveDist(5)
+        rotDeg(-90)
 
 
     """
