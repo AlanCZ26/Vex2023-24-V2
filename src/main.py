@@ -111,19 +111,21 @@ def PTOmotors(s):
         else:
             ltMotor.spin(FORWARD,s,VOLT)
             rtMotor.spin(FORWARD,s,VOLT)
-
+shootCommand = False
 def catapult():
     global autoCata
+    global shootCommand
     while True:
         wait(0.01,SECONDS)
-        if not (controller.buttonX.pressing() or (cataDist.object_distance(MM) < 20 and autoCata == True)):
+        if not (controller.buttonX.pressing() or (cataDist.object_distance(MM) < 20 and autoCata == True) or shootCommand):
             cataMotor.stop()
-        if controller.buttonX.pressing() or (cataDist.object_distance(MM) < 20 and autoCata == True):
+        if controller.buttonX.pressing() or (cataDist.object_distance(MM) < 20 and autoCata == True) or shootCommand:
             #if not controller.buttonX.pressing(): wait(0.05,SECONDS)
             cataMotor.spin(FORWARD,12,VOLT)
             wait(0.2,SECONDS)
             while limit.value() == 1:
                 wait(0.01,SECONDS)
+            shootCommand = False
 
 
 def lifter():
@@ -227,7 +229,6 @@ def driveDist(target):
     errorPrev = abs(target)
     timer = 200
     while abs(errorPrev) > 1.5 and (error != errorPrev) and timer > 0:
-        print("test")
         timer -= 1
         wait(0.01,SECONDS)
         measure = (lMotor1.position(DEGREES)+lMotor2.position(DEGREES)+rMotor1.position(DEGREES)+rMotor2.position(DEGREES))*0.00425424005
@@ -256,16 +257,17 @@ def driveDist(target):
 absoluteAngle = 0
 
 def rotCall(target):
-    if abs(target) == 90: #tuned 90 degree turn, 700ms either direction
-        rotDeg(target, 0.19, 0.0, 1, 80, 2, 5)
-        #rotDeg(target,0.6,0,0,0,3,0)
+    if True:#abs(target) == 90: #tuned 90 degree turn, 700ms either direction
+        rotDeg(target, 0.35, 0.0, 2.3, 120, 5, 5)
+        #rotDeg(target,0.6,0,0,0,3,0) rotDeg(target, 0.19, 0.0, 1, 80, 2, 5)
         #Ku = 2, Tu = 400 MS
         #Tu data: 103 - 81 - 63, 144 - 122 - 103
     else: #default
-        rotDeg(target, 0.19, 0.0, 1, target * 1.5 + 10, 2, 5)
+        rotDeg(target, 0.19, 0.0, 1, abs(target * 1.5) + 10, 2, 5)
 
 def rotDeg(target, Kp, Ki, Kd, timer, mv, iw):
     global absoluteAngle
+    inPrinter = target
     absoluteAngle += target
     print("New rotation instruction: " + str(target))
     target = absoluteAngle
@@ -276,11 +278,13 @@ def rotDeg(target, Kp, Ki, Kd, timer, mv, iw):
     prevErr = abs(target - gyro.rotation()) 
     realPrevErr = prevErr
     startingTime = timer
-    listP = []
-    listI = []
-    listD = []
-    listO = []
-    listR = []
+    testing = False
+    if testing == True:
+        listP = []
+        listI = []
+        listD = []
+        listO = []
+        listR = []
     while abs(prevErr) > 0.5 and timer > 0: #and prevErr != error:
         timer -= 1
         wait(0.01,SECONDS)
@@ -295,37 +299,38 @@ def rotDeg(target, Kp, Ki, Kd, timer, mv, iw):
         #elif output < -sub: output += sub
         if output > 0 and output < mv: output = mv #min values
         elif output < 0 and output > -mv: output = (-1*mv)
-        listP.append(round(error * Kp,2))
-        listI.append(round(integral * Ki,2))
-        listD.append(round(derivative * Kd,2))
-        listO.append(round(error,2))
-        listR.append(round(output,2))        
+        if False:
+            listP.append(round(error * Kp,2))
+            listI.append(round(integral * Ki,2))
+            listD.append(round(derivative * Kd,2))
+            listO.append(round(error,2))
+            listR.append(round(output,2))        
         drivetrain(output*8,output*-8)
-        print(error)
-        print(timer)
+        print(str(timer)+"0MS, "+str(error))
         prevErr = (prevErr * 2 + abs(error)) / 3
     if timer == 0: print("TIMED OUT")
     else:
-        print("COMMAND: " + str(target)) 
+        print("COMMAND: " + str(inPrinter)) 
         print("TOOK " + str(startingTime - timer) + "0 MS")
     drivetrain(0,0)
-    #wait(0.1,SECONDS)
-    wait(1,SECONDS)
-    #print(listP)
-    print("-----------------------")
-    wait(0.2,SECONDS)
-    print(listI)
-    print("-----------------------")
-    wait(0.2,SECONDS)
-    print(listD)
-    print("-----------------------")
-    wait(0.2,SECONDS)
-    print(listO)
-    print("-----------------------")
-    wait(0.2,SECONDS)
-    print(listR)
-    print("-----------------------")
-    wait(0.2,SECONDS)
+    wait(0.1,SECONDS)
+    if False:
+        wait(0.2,SECONDS)
+        #print(listP)
+        print("-----------------------")
+        wait(0.2,SECONDS)
+        print(listI)
+        print("-----------------------")
+        wait(0.2,SECONDS)
+        print(listD)
+        print("-----------------------")
+        wait(0.2,SECONDS)
+        print(listO)
+        print("-----------------------")
+        wait(0.2,SECONDS)
+        print(listR)
+        print("-----------------------")
+        wait(0.2,SECONDS)
 
 
 
@@ -402,6 +407,7 @@ def autonomous():
     global autoCata
     global liftVar
     global absoluteAngle
+    global shootCommand
     setDriveStopping(BRAKE)
     #auton
     brain.screen.clear_screen()
@@ -410,7 +416,7 @@ def autonomous():
     #get center ball that's touching bar, turn, push that one along with the middle one and the other one in with wings
     #left side: push alliance ball in, get ball out of corner, let go of ball, go touch pole
     
-    if True:
+    if False:
         rotCall(-90)
         wait(1,SECONDS)
         rotCall(90)
@@ -418,8 +424,59 @@ def autonomous():
         rotCall(-45)
         rotCall(45)
     elif True:
+        shootCommand = True
+        rotCall(-27)
+        driveDist(20)
+        rotCall(27) #get in front of the goal
+        intakePiston.set(True)
+        wait(0.6,SECONDS)
+        driveDist(-6)
+        rotCall(180)
+        drivetrain(-100,-100)
+        wait(0.6,SECONDS)
+        drivetrain(0,0)
+        driveDist(8)
+        rotCall(-90)
+        drivetrain(-50,-50)
+        wait(0.5,SECONDS)
+        driveDist(1)
+        rotCall(-20)
+        sidePiston.set(True)
+        intakePiston.set(False)
+        autoCata = True
+        wait(4,SECONDS) #change to 30 or smth later
+        sidePiston.set(False)
+        wait(0.1,SECONDS)
+        autoCata = False
+        driveDist(3)
+        rotCall(40)
+        driveDist(20)
+        rotCall(-110)
+        drivetrain(-100,-100)
+        wait(0.4,SECONDS)
+        drivetrain(-70,-70)
+        wait(0.2,SECONDS)
+        print(absoluteAngle)
+        print("ABS ANGLE RESET")
+        shootCommand = True
+        absoluteAngle = 0
+        drivetrain(0,0)
+        driveDist(3)
+        rotCall(-91)
+        driveDist(-78)
+        intakePiston.set(True)
+        PTOswitcher(True)
+        rotCall(-44)
+        driveDist(-26)
+        rotCall(-45)
+        drivetrain(-100,-100)
+        wait(0.4,SECONDS)
+        drivetrain(0,0)
+
+
+    elif True: #thingie
         driveDist(-14)
-        rotDeg(-70)
+        rotCall(-70)
         sidePiston.set(True)
         autoCata = True
         wait(3,SECONDS)
@@ -427,9 +484,9 @@ def autonomous():
         wait(0.1,SECONDS)
         autoCata = False
         driveDist(3)
-        rotDeg(55)
+        rotCall(55)
         driveDist(18)
-        rotDeg(-115)
+        rotCall(-115)
         drivetrain(-80,-80)
         wait(0.8,SECONDS)
         print(absoluteAngle)
@@ -437,7 +494,7 @@ def autonomous():
         absoluteAngle = -135
         drivetrain(0,0)
         driveDist(5)
-        rotDeg(-90)
+        rotCall(-90)
 
 
     """
