@@ -123,13 +123,19 @@ def catapult():
             #if not controller.buttonX.pressing(): wait(0.05,SECONDS)
             cataMotor.spin(FORWARD,12,VOLT)
             wait(0.3,SECONDS)
-            while limit.value() == 1:
+            timer = 80
+            while limit.value() == 1 and timer > 0:
                 wait(0.01,SECONDS)
-            shootCommand = False
+                timer -= 1
+            if timer == 0:
+                cataMotor.spin(REVERSE,12,VOLT)
+                wait(0.1,SECONDS)
+                cataMotor.stop()
+            else:
+                shootCommand = False
 
 
 def lifter():
-    #have this as a thread: once called, control loop up/down until finished, then kill the thread
     global liftVar #1 = up, 2 = down, 0 = none
     global autoCata
     while True:
@@ -174,7 +180,7 @@ def lifter():
             rtMotor.set_stopping(BRAKE)
             PTOmotors(12) #loop to make it go up until limit
             i = 0
-            while (liftSens.position() % 360) < 20 and i < 30:
+            while (liftSens.position() % 360) < 10 and i < 30:
                 wait(0.1,SECONDS)
                 i+=1
             wait(0.05,SECONDS)
@@ -467,7 +473,7 @@ def autonomous():
         sidePiston.set(True)
         ratchPiston.set(True)
         autoCata = True
-        #wait(5,SECONDS) #change to 30 or smth later
+        wait(25,SECONDS) #25
         ratchPiston.set(False)
         wait(2,SECONDS)
         sidePiston.set(False)
@@ -498,35 +504,32 @@ def autonomous():
         rotCall(70)
 
         #first push
-        intakePiston.set(False)
         driveDist(-20)
         rotCall(-90)
-        intMotor.spin(REVERSE,11,VOLT)
         wingsSolenoid.set(True)
         wingsSolenoid2.set(True)
         wait(0.2,SECONDS)
         drivetrain(100,100)
         wait(0.9,SECONDS)
-        intMotor.stop()
         drivetrain(-70,-70)
         wingsSolenoid.set(False)
         wingsSolenoid2.set(False)
         wait(0.1,SECONDS)
         rotCall(0)
-        driveDist(-28)
+        driveDist(-20)
         rotCall(90)
-        driveDist(-25)
+        driveDist(-30)
         rotCall(-70)
         wingsSolenoid.set(True)
         wingsSolenoid2.set(True)
         wait(0.2,SECONDS)
         drivetrain(100,100)
-        wait(0.6,SECONDS)
+        wait(0.8,SECONDS)
         drivetrain(-100,-100)
         wait(0.4,SECONDS)
         rotCall(-20)
         drivetrain(100,100)
-        wait(0.5,SECONDS)
+        wait(0.6,SECONDS)
         drivetrain(-100,-100)
         wait(0.1,SECONDS)
         drivetrain(0,0)
@@ -534,10 +537,10 @@ def autonomous():
         wingsSolenoid2.set(False)
         driveDist(-7)
         rotCall(-90)
-        driveDist(50)
-        rotCall(-50)
+        driveDist(53)
+        rotCall(-70)
         #side in
-        drivetrain(-100,-100)
+        drivetrain(-50,-100)
         wait(1,SECONDS)
         drivetrain(100,100)
         wait(0.4,SECONDS)
@@ -549,6 +552,7 @@ def autonomous():
         wait(1,SECONDS)
         drivetrain(100,100)
         wait(0.4,SECONDS)
+        drivetrain(0,0)
 
     elif True: #thingie
         driveDist(-14)
