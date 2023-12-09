@@ -112,13 +112,15 @@ def PTOmotors(s):
             ltMotor.spin(FORWARD,s,VOLT)
             rtMotor.spin(FORWARD,s,VOLT)
 shootCommand = False
+infiniteCata = False
 def catapult():
+    global infiniteCata
     global autoCata
     global shootCommand
     while True:
         wait(0.01,SECONDS)
         #if not (controller.buttonX.pressing() or (cataDist.object_distance(MM) < 20 and autoCata == True) or shootCommand):
-        cataMotor.stop()
+        if infiniteCata == False: cataMotor.stop()
         if controller.buttonX.pressing() or (cataDist.object_distance(MM) < 20 and autoCata == True) or shootCommand:
             #if not controller.buttonX.pressing(): wait(0.05,SECONDS)
             cataMotor.spin(FORWARD,12,VOLT)
@@ -183,7 +185,7 @@ def lifter():
             while (liftSens.position() % 360) < 10 and i < 30:
                 wait(0.1,SECONDS)
                 i+=1
-            wait(0.05,SECONDS)
+            #wait(0.05,SECONDS)
             PTOmotors(0)
             liftVar = 0
 
@@ -251,7 +253,7 @@ def driveDist(target):
     Kd = 0
     error = target + 0.1
     errorPrev = abs(target)
-    timer = abs(target) * 30
+    timer = (abs(target) * 3) + 50
     while abs(errorPrev) > 1.5 and (error != errorPrev) and timer > 0:
         timer -= 1
         wait(0.01,SECONDS)
@@ -428,6 +430,7 @@ def pre_autonomous():
                 controller.screen.clear_screen()
 
 def autonomous():
+    global infiniteCata
     global autoCata
     global liftVar
     global absoluteAngle
@@ -447,20 +450,32 @@ def autonomous():
         wait(5,SECONDS)
         rotCall(-45)
         rotCall(45)
-    elif True:
+    elif True: #skills auto
         shootCommand = True
         rotCall(-27)
         driveDist(20)
         rotCall(27) #get in front of the goal
-        intakePiston.set(True)
-        wait(0.6,SECONDS)
-        driveDist(-5)
-        rotCall(180)
-        drivetrain(-100,-100)
-        wait(0.6,SECONDS)
-        drivetrain(0,0)
-        driveDist(8)
-        rotCall(-90)
+        if False:
+            intakePiston.set(True)
+            wait(0.6,SECONDS)
+            driveDist(-6)
+            rotCall(180)
+            drivetrain(-100,-100)
+            wait(0.6,SECONDS)
+            drivetrain(0,0)
+            driveDist(8)
+            rotCall(-90)
+        else:
+            drivetrain(-100,-100)
+            intakePiston.set(True)
+            intMotor.spin(REVERSE,12,VOLT)
+            wait(0.1,SECONDS)
+            drivetrain(100,100)
+            wait(0.6,SECONDS)
+            drivetrain(0,0)
+            intMotor.stop()
+            driveDist(-12)
+            rotCall(90)
         intakePiston.set(False)
         drivetrain(-50,-50)
         wait(0.5,SECONDS)
@@ -469,11 +484,13 @@ def autonomous():
         drivetrain(0,0)
         liftVar = 3
         
-        rotCall(-20)
+        rotCall(-25)
         sidePiston.set(True)
         ratchPiston.set(True)
         autoCata = True
-        wait(25,SECONDS) #25
+        infiniteCata = True
+        #cataMotor.spin(REVERSE,12,VOLT)
+        wait(28,SECONDS) #25 or 28 ----------
         ratchPiston.set(False)
         wait(2,SECONDS)
         sidePiston.set(False)
@@ -481,27 +498,40 @@ def autonomous():
         
         wait(0.1,SECONDS)
         driveDist(3)
+        cataMotor.stop()
         autoCata = False 
-        rotCall(55)
+        infiniteCata = False
+        rotCall(60)
+        shootCommand = True
         driveDist(31)
         rotCall(-216)
 
-        driveDist(-70)
+        #driveDist(-78) #across
+        driveDist(-82)
+
         intakePiston.set(True)
         PTOswitcher(True)
-        rotCall(-34)
-        driveDist(-25)
-        rotCall(-55)
+
+        if False:
+            rotCall(-34)
+            driveDist(-22)
+            rotCall(-55)
+        else:
+            sidePiston.set(True)
+            rotCall(-20)
+            drivetrain(-100,-50)
+            wait(1,SECONDS)
         sidePiston.set(True)
-        drivetrain(-100,-100)
-        wait(0.8,SECONDS)
+        drivetrain(100,100)
+        wait(0.2,SECONDS)
         drivetrain(0,0)
-        sidePiston.set(False)
-        rotCall(0)
-        driveDist(15)
+        #rotCall(0)
         rotCall(-70)
-        driveDist(-48)
-        rotCall(70)
+        driveDist(15)
+        sidePiston.set(False)
+        rotCall(-60)
+        driveDist(-45)
+        rotCall(60)
 
         #first push
         driveDist(-20)
@@ -516,17 +546,17 @@ def autonomous():
         wingsSolenoid2.set(False)
         wait(0.1,SECONDS)
         rotCall(0)
-        driveDist(-20)
+        driveDist(-24)
         rotCall(90)
         driveDist(-30)
         rotCall(-70)
         wingsSolenoid.set(True)
         wingsSolenoid2.set(True)
-        wait(0.2,SECONDS)
+        wait(0.1,SECONDS)
         drivetrain(100,100)
-        wait(0.8,SECONDS)
+        wait(0.9,SECONDS)
         drivetrain(-100,-100)
-        wait(0.4,SECONDS)
+        wait(0.3,SECONDS)
         rotCall(-20)
         drivetrain(100,100)
         wait(0.6,SECONDS)
@@ -544,15 +574,34 @@ def autonomous():
         wait(1,SECONDS)
         drivetrain(100,100)
         wait(0.4,SECONDS)
+        rotCall(70)
         drivetrain(-100,-100)
         wait(1,SECONDS)
         drivetrain(100,100)
         wait(0.4,SECONDS)
+        rotCall(0)
         drivetrain(-100,-100)
         wait(1,SECONDS)
         drivetrain(100,100)
         wait(0.4,SECONDS)
         drivetrain(0,0)
+
+    elif True:
+        intMotor.spin(FORWARD,12,VOLT)
+        driveDist(3)
+        wait(0.5,SECONDS)
+        driveDist(-32)
+        intMotor.stop()
+        rotCall(135)
+        sidePiston.set(True)
+        driveDist(15)
+        rotCall(-45)
+        intakePiston.set(True)
+        driveDist(18)
+
+
+
+
 
     elif True: #thingie
         driveDist(-14)
